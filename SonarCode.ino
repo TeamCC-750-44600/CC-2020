@@ -1,6 +1,7 @@
-#define TOLERANCE 2
+#define TOLERANCE 1
 #define DELAYTIME 100
 #define MIN_VALUE 7
+
 class sensor
 {
   private:
@@ -31,15 +32,16 @@ class sensor
 const int analogPin = A0;
 const int pwPin = 5;
 sensor sonarSensor(analogPin, pwPin);
+byte prevValue = 0;//2 for moving closer, 1 for moving away
 
 void setup() 
 {
-  pinMode(analogPin, INPUT);
-  pinMode(pwPin, INPUT);
-  Serial.begin(9600);
-  pinMode(12, OUTPUT);
-  pinMode(11, OUTPUT);
-	Serial.print("Threshold: ")
+	pinMode(analogPin, INPUT);
+	pinMode(pwPin, INPUT);
+	Serial.begin(9600);
+	pinMode(12, OUTPUT);
+	pinMode(11, OUTPUT);
+	Serial.print("Threshold: ");
 	Serial.print(TOLERANCE/DELAYTIME * 100);
 	Serial.print(" inches per second\n");
 }
@@ -51,23 +53,45 @@ void loop()
 	int currVal = sonarSensor.readSensor();
 	if(currVal > MIN_VALUE)
 	{
-	  if(currVal + TOLERANCE < storedVal)
-	  {
-	    PORTB &= B11110111;
-		  PORTB |= B00010000;
-	  }
-	  else if(currVal - TOLERANCE > storedVal)
-	  {
-	    PORTB &= B11101111;
-	    PORTB |= B00001000;
-	  }
-	  else
-	  {
-		  PORTB &= B11100111;
-	  }
+		if(currVal + TOLERANCE < storedVal)
+		{
+			//PORTB &= B11110111;
+			digitalWrite(11, LOW);
+			if(prevValue == 2)
+			{
+
+				//PORTB |= B00010000;
+				digitalWrite(12, HIGH);
+			}
+			else
+			{
+				prevValue = 2;
+			}
+	 	}
+	 	else if(currVal - TOLERANCE > storedVal )
+		{
+			//PORTB &= B11101111;
+			digitalWrite(12, LOW);
+			if(prevValue == 1)
+			{
+				//PORTB |= B00001000;
+				digitalWrite(11, HIGH);
+			}
+			else
+			{
+				prevValue = 1;
+			}
+		}
+	 	else
+	 	{
+			PORTB &= B11100111;
+			//digitalWrite(12, LOW);	
+			//digitalWrite(11, LOW);	
+			prevValue = 0;
+		}
 	}
 	else
 	{
-	  PORTB &= B11100111;
+		PORTB &= B11100111;
 	}
 }
