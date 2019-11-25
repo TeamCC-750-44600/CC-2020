@@ -49,50 +49,45 @@ void setup()
 void loop() 
 {
 	int storedVal = sonarSensor.readSensor();
-	delay(DELAYTIME);
+	sound_check();
 	int currVal = sonarSensor.readSensor();
 	if(currVal > MIN_VALUE)
 	{
-	if(currVal + TOLERANCE < storedVal)
-	{
-		//PORTB &= B11110111;
-		digitalWrite(11, LOW);
-		if(prevValue == 2)
+		if(currVal + TOLERANCE < storedVal)
 		{
-
-		//PORTB |= B00010000;
-		digitalWrite(12, HIGH);
-		}
-		else
-		{
-		prevValue = 2;
-		}
+			//PORTB &= B11110111;
+			digitalWrite(11, LOW);
+			if(prevValue == 2)
+			{
+			//PORTB |= B00010000;
+			digitalWrite(12, HIGH);
+			}
+			else
+			{
+				prevValue = 2;
+			}
 		}
 		else if(currVal - TOLERANCE > storedVal )
-	{
-		//PORTB &= B11101111;
-		digitalWrite(12, LOW);
-		if(prevValue == 1)
 		{
-		//PORTB |= B00001000;
-		digitalWrite(11, HIGH);
+			//PORTB &= B11101111;
+			digitalWrite(12, LOW);
+			if(prevValue == 1)
+			{
+				//PORTB |= B00001000;
+				digitalWrite(11, HIGH);
+			}
+			else
+			{
+				prevValue = 1;
+			}
 		}
 		else
 		{
-		prevValue = 1;
+			PORTB &= B11100111;
+			//digitalWrite(12, LOW);	
+			//digitalWrite(11, LOW);	
+			prevValue = 0;
 		}
-	}
-		else
-		{
-		PORTB &= B11100111;
-		//digitalWrite(12, LOW);	
-		//digitalWrite(11, LOW);	
-		prevValue = 0;
-	}
-	}
-	else
-	{
-	PORTB &= B11100111;
 	}
 }
 void sound_check()
@@ -131,16 +126,12 @@ void sound_check()
 		Serial.println("Squid horn"); 
 	}
 	Serial.println(volts);
-
-
-	 
-	 
-	 //Serial.print("SignalMax is: ");
-	 //Serial.println(signalMax);
-	 //Serial.print("SignalMin is: ");
-	 //Serial.println(signalMin);
-	 //Serial.println(counter);
-	 //frequency = 320/peakToPeak; //To calculate frequency
-	 //Serial.println(frequency);
+	//Serial.print("SignalMax is: ");
+	//Serial.println(signalMax);
+	//Serial.print("SignalMin is: ");
+	//Serial.println(signalMin);
+	//Serial.println(counter);
+	//frequency = 320/peakToPeak; //To calculate frequency
+	//Serial.println(frequency);
 }
 
