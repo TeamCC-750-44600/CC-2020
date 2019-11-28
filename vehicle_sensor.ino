@@ -2,7 +2,7 @@
 #define DELAYTIME 100
 #define MIN_VALUE 7
 #define MIC_PIN A0
-#define SONAR_PIN A0
+#define SONAR_PIN A1
 #define SOUND_LED 10
 #define SONAR_CLOSER 11
 #define SONAR_FURTHER 12
@@ -63,7 +63,8 @@ void setup()
 {
 	Serial.begin(9600);
 	pinMode(SONAR_CLOSER, OUTPUT);
-	pinMode(SONAR_FURTHER, OUTPUT);
+	//pinMode(SONAR_FURTHER, OUTPUT);
+	pinMode(SOUND_LED, OUTPUT);
 	Serial.print("Threshold: ");
 	Serial.print(TOLERANCE/DELAYTIME * 100);
 	Serial.print(" inches per second\n");
@@ -83,7 +84,7 @@ void loop()
 		if(currVal + TOLERANCE < storedVal)
 		{
 			//PORTB &= B11110111;
-			digitalWrite(SONAR_FURTHER, LOW);
+			//digitalWrite(SONAR_FURTHER, LOW);
 			if(prevValue == 2)
 			{
 			PORTB |= B00010000;
@@ -94,6 +95,7 @@ void loop()
 				prevValue = 2;
 			}
 		}
+#if 0
 		else if(currVal - TOLERANCE > storedVal )
 		{
 			//PORTB &= B11101111;
@@ -102,16 +104,17 @@ void loop()
 			{
 				//PORTB |= B00001000;
 				digitalWrite(SONAR_FURTHER, HIGH);
-			}
+			
 			else
 			{
 				prevValue = 1;
 			}
 		}
+#endif
 		else
 		{
-			PORTB &= B11100111;
-			//digitalWrite(SONAR_CLOSER, LOW);	
+			//PORTB &= B11100111;
+			digitalWrite(SONAR_CLOSER, LOW);	
 			//digitalWrite(SONAR_FURTHER, LOW);	
 			prevValue = 0;
 		}
