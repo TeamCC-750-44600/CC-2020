@@ -1,12 +1,23 @@
 #define TOLERANCE 1
 #define DELAYTIME 100
 #define MIN_VALUE 7
+#define MIC_PIN A0
+#define SONAR_PIN A0
+#define SOUND_LED 10
+#define SONAR_CLOSER 11
+#define SONAR_FURTHER 12
+
+#include <fix_fft.h> // github.com/kosme/fix_fft
+#define SEARCH_FREQ 6// 440 hertz, found experimentally
+//Increase about 100 hertz per output
+
+char im[128], data[128];
+int val;//Counter
 
 class sensor
 {
 	private:
 	int anPin;
-	int pwPin;
 
 	//Following readSensor funcions from https://www.maxbotix.com/Arduino-Ultrasonic-Sensors-085/ with constants modified
 	public:
@@ -23,24 +34,36 @@ class sensor
 		Serial.println(readSensor());
 		
 	}
-	sensor(int anPinIn, int pwPinIn)//constructor
+	sensor(int anPinIn)//constructor
 	{
 		anPin = anPinIn;
-		pwPin = pwPinIn;
 	}
 };
-const int analogPin = A0;
-const int pwPin = 5;
-sensor sonarSensor(analogPin, pwPin);
+sensor sonarSensor(SONAR_PIN);
 byte prevValue = 0;//2 for moving closer, 1 for moving away
+
+void sound_check()
+{
+	//int min = 1024, max = 0;
+	for(int ii = 0; ii < 128; ii++)		// Take 128 samples
+	{
+		val = analogRead(MIC_PIN);	// Read in value
+		data[ii] = val/4 - 120;		// Populate array
+		im[ii] = 0;			//
+	}
+	fix_fft(data, im, 7, 0);		// Dark magic happens here
+	int dat = sqrt(data[SEARCH_FREQ]*data[SEARCH_FREQ] + im[SEARCH_FREQ] * im[SEARCH_FREQ]); //Clean up values? Not really sure, but this seems important
+	if(dat > 3)				// If it's above a certain tolerance
+		digitalWrite(SOUND_LED, HIGH);
+	else
+		digitalWrite(SOUND_LED, LOW);
+}
 
 void setup() 
 {
-	pinMode(analogPin, INPUT);
-	pinMode(pwPin, INPUT);
 	Serial.begin(9600);
-	pinMode(12, OUTPUT);
-	pinMode(11, OUTPUT);
+	pinMode(SONAR_CLOSER, OUTPUT);
+	pinMode(SONAR_FURTHER, OUTPUT);
 	Serial.print("Threshold: ");
 	Serial.print(TOLERANCE/DELAYTIME * 100);
 	Serial.print(" inches per second\n");
@@ -49,18 +72,22 @@ void setup()
 void loop() 
 {
 	int storedVal = sonarSensor.readSensor();
-	sound_check();
+	int startMs = millis();
+	while (millis()-startMs < DELAYTIME)
+	{
+		sound_check();
+	}//Wait for DELAYTIME milliseconds
 	int currVal = sonarSensor.readSensor();
 	if(currVal > MIN_VALUE)
 	{
 		if(currVal + TOLERANCE < storedVal)
 		{
 			//PORTB &= B11110111;
-			digitalWrite(11, LOW);
+			digitalWrite(SONAR_FURTHER, LOW);
 			if(prevValue == 2)
 			{
-			//PORTB |= B00010000;
-			digitalWrite(12, HIGH);
+			PORTB |= B00010000;
+			digitalWrite(SONAR_CLOSER, HIGH);
 			}
 			else
 			{
@@ -70,11 +97,11 @@ void loop()
 		else if(currVal - TOLERANCE > storedVal )
 		{
 			//PORTB &= B11101111;
-			digitalWrite(12, LOW);
+			digitalWrite(SONAR_CLOSER, LOW);
 			if(prevValue == 1)
 			{
 				//PORTB |= B00001000;
-				digitalWrite(11, HIGH);
+				digitalWrite(SONAR_FURTHER, HIGH);
 			}
 			else
 			{
@@ -84,54 +111,9 @@ void loop()
 		else
 		{
 			PORTB &= B11100111;
-			//digitalWrite(12, LOW);	
-			//digitalWrite(11, LOW);	
+			//digitalWrite(SONAR_CLOSER, LOW);	
+			//digitalWrite(SONAR_FURTHER, LOW);	
 			prevValue = 0;
 		}
 	}
 }
-void sound_check()
-{
-	unsigned int sample;
-	int counter = 0; 
-	unsigned long startMillis= millis();	// Start of sample window
-	unsigned int peakToPeak = 0;	 // peak-to-peak level
-	//double frequency = 0;
- 
-	unsigned int signalMax = 0;
-	unsigned int signalMin = 1024;
- 
-	// collect data for DELAYTIME mS
-	while (millis() - startMillis < DELAYTIME)
-	{
-		sample = analogRead(A1);
-		if (sample < 1024)	// toss out spurious readings
-		{	
-			if (sample > signalMax)
-			{
-				signalMax = sample;	// save just the max levels
-			}
-			else if (sample < signalMin)
-			{
-					signalMin = sample;	// save just the min levels
-			}
-			counter ++;
-		}
-	}
-	peakToPeak = signalMax - signalMin;	// max - min = peak-peak amplitude
-	double volts = (peakToPeak * 5.0) / 1024;	// convert to volts
-	if (volts > 1.50)
-	{
-		//BUZZER HERE
-		Serial.println("Squid horn"); 
-	}
-	Serial.println(volts);
-	//Serial.print("SignalMax is: ");
-	//Serial.println(signalMax);
-	//Serial.print("SignalMin is: ");
-	//Serial.println(signalMin);
-	//Serial.println(counter);
-	//frequency = 320/peakToPeak; //To calculate frequency
-	//Serial.println(frequency);
-}
-
