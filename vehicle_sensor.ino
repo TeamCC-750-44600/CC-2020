@@ -6,14 +6,17 @@
 #define SOUND_LED 10
 #define SONAR_CLOSER 11
 #define SONAR_FURTHER 12
+#define TIME_THRESHOLD 1
+
+#define MIN_VOLUME 3
 
 #include <fix_fft.h> // github.com/kosme/fix_fft
-#define SEARCH_FREQ 6// 440 hertz, found experimentally
-//Increase about 100 hertz per output
+#define SEARCH_FREQ 6// About 370-470 hertz, found experimentally
 
 char im[128], data[128];
 int val;//Counter
 
+unsigned long consTimes = 0;//Number of consecutive sensor readings in which something is moving closer
 class sensor
 {
 	private:
@@ -21,11 +24,12 @@ class sensor
 
 	//Following readSensor funcions from https://www.maxbotix.com/Arduino-Ultrasonic-Sensors-085/ with constants modified
 	public:
-	int readSensor()//Read using analog voltage
+	double readSensor()//Read using analog voltage
 	{
 		double anVolt = analogRead(anPin);
-		double inches = anVolt/2; //Takes mm and converts it to inches
-		return (int)inches;
+		double inches = anVolt/2; //Takes input and converts it to inches
+		Serial.println(inches);
+		return inches;
 	}
 	
 	void debug()//Will simply print out readings in serial monitor
@@ -40,7 +44,6 @@ class sensor
 	}
 };
 sensor sonarSensor(SONAR_PIN);
-byte prevValue = 0;//2 for moving closer, 1 for moving away
 
 void sound_check()
 {
@@ -53,10 +56,15 @@ void sound_check()
 	}
 	fix_fft(data, im, 7, 0);		// Dark magic happens here
 	int dat = sqrt(data[SEARCH_FREQ]*data[SEARCH_FREQ] + im[SEARCH_FREQ] * im[SEARCH_FREQ]); //Clean up values? Not really sure, but this seems important
-	if(dat > 3)				// If it's above a certain tolerance
+	if(dat > MIN_VOLUME)			// If it's above a certain tolerance
+	{
 		digitalWrite(SOUND_LED, HIGH);
+	}
 	else
+	{
 		digitalWrite(SOUND_LED, LOW);
+	}
+	//Serial.println(dat);
 }
 
 void setup() 
@@ -65,58 +73,37 @@ void setup()
 	pinMode(SONAR_CLOSER, OUTPUT);
 	//pinMode(SONAR_FURTHER, OUTPUT);
 	pinMode(SOUND_LED, OUTPUT);
-	Serial.print("Threshold: ");
-	Serial.print(TOLERANCE/DELAYTIME * 100);
-	Serial.print(" inches per second\n");
+//	Serial.print("Threshold: ");
+//	Serial.print(TOLERANCE/DELAYTIME * 100);
+//	Serial.print(" inches per second\n");
 }
 
 void loop() 
 {
-	int storedVal = sonarSensor.readSensor();
-	int startMs = millis();
+	double storedVal = sonarSensor.readSensor();
+	unsigned long startMs = millis();
 	while (millis()-startMs < DELAYTIME)
 	{
 		sound_check();
-	}//Wait for DELAYTIME milliseconds
-	int currVal = sonarSensor.readSensor();
+	}//Repeat for DELAYTIME milliseconds
+	double currVal = sonarSensor.readSensor();
 	if(currVal > MIN_VALUE)
 	{
 		if(currVal + TOLERANCE < storedVal)
 		{
-			//PORTB &= B11110111;
-			//digitalWrite(SONAR_FURTHER, LOW);
-			if(prevValue == 2)
+			if(consTimes >= TIME_THRESHOLD)
 			{
-			PORTB |= B00010000;
-			digitalWrite(SONAR_CLOSER, HIGH);
+				digitalWrite(SONAR_CLOSER, HIGH);
 			}
 			else
 			{
-				prevValue = 2;
+				consTimes++;
 			}
 		}
-#if 0
-		else if(currVal - TOLERANCE > storedVal )
-		{
-			//PORTB &= B11101111;
-			digitalWrite(SONAR_CLOSER, LOW);
-			if(prevValue == 1)
-			{
-				//PORTB |= B00001000;
-				digitalWrite(SONAR_FURTHER, HIGH);
-			
-			else
-			{
-				prevValue = 1;
-			}
-		}
-#endif
 		else
 		{
-			//PORTB &= B11100111;
 			digitalWrite(SONAR_CLOSER, LOW);	
-			//digitalWrite(SONAR_FURTHER, LOW);	
-			prevValue = 0;
+			consTimes = 0;
 		}
 	}
 }
