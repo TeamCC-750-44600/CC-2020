@@ -1,39 +1,48 @@
+const int MIN_LIGHT = 8;
+const int MAX_LIGHT = 256;
+const int SUN = 10;
+const int BUTTON = 2;
+const int PUMP = 9;
+const int VACUUM = 11; 
 
-int MIN_LIGHT = 8;
-int MAX_LIGHT = 256;
-int sun = 10;
+bool but_press = false;
 int state = 0;
-int button = 2;
-int pump = 9;
-int vacuum = 11; 
 
 void setup()
 {
-  pinMode (sun, OUTPUT);
-  pinMode(pump, OUTPUT);
-  pinMode(vacuum, OUTPUT);
-  pinMode(button, INPUT);
-  for (int ii = 0; ii <= MIN_LIGHT; ii++)
-  {
-    analogWrite(sun, ii);
-    delay(50);
-  }
+  pinMode (SUN, OUTPUT);
+  pinMode(PUMP, OUTPUT);
+  pinMode(VACUUM, OUTPUT);
+  pinMode(BUTTON, INPUT);
+  analogWrite(SUN, MAX_LIGHT);
 }
-
+#define E 2.7182818284590452353602874713527
 
 void loop()
 {
-  digitalWrite
-  digitalWrite(pump, HIGH);
-  state = digitalRead(button);
+  state = digitalRead(BUTTON);
   if(state == LOW)
   {
-    for (int ii = MIN_LIGHT; ii < MAX_LIGHT; ii++)
+    if(but_press == false)
     {
-      analogWrite(sun, ii);
-      delay(10);
+        for (int ii = MAX_LIGHT; ii >= MIN_LIGHT; ii-=4)
+        {
+          analogWrite(SUN, ii);
+          delay(50);
+        }
+        digitalWrite(VACUUM, LOW);
+        digitalWrite(PUMP, HIGH);
     }
-    digitalWrite(pump, LOW);
-    digitalWrite(vacuum, HIGH);
+    else
+    {
+      for (int ii = MIN_LIGHT; ii <= MAX_LIGHT; ii+=4)
+      {
+        analogWrite(SUN, ii);
+        delay(50);
+      }
+        digitalWrite(PUMP, LOW);
+        digitalWrite(VACUUM, HIGH);
+    }
+    but_press = !but_press;
   }
 }
